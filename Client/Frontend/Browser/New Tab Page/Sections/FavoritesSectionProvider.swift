@@ -214,5 +214,57 @@ extension FavoritesSectionProvider: NSFetchedResultsControllerDelegate {
     func controllerDidChangeContent(_ controller: NSFetchedResultsController<NSFetchRequestResult>) {
         try? frc.performFetch()
         sectionDidChange?()
+        if #available(iOS 14, *) {
+            if let favs = frc.fetchedObjects {
+                FavoritesWidgetData.updateWidgetData(favs)
+            }
+        }
+    }
+}
+
+import SDWebImage
+#if canImport(WidgetKit)
+import WidgetKit
+import BraveShared
+#endif
+
+@available(iOS 14.0, *)
+class FavoritesWidgetData {
+    static private var fetchers: [FaviconFetcher] = []
+    static func updateWidgetData(_ favs: [Bookmark]) {
+        struct FavData: Encodable {
+            var url: URL
+            var favicon: FaviconAttributes?
+        }
+//        DispatchQueue.global(qos: .utility).async {
+        let group = DispatchGroup()
+        var favData: [FavData] = []
+        favs.prefix(16).forEach { fav in
+            if let url = fav.url?.asURL {
+                group.enter()
+                let fetcher = FaviconFetcher(siteURL: url, kind: .largeIcon)
+                fetchers.append(fetcher)
+                fetcher.load { _, attributes in
+                    favData.append(.init(url: url, favicon: attributes))
+                    group.leave()
+                }
+            }
+        }
+        group.notify(queue: .main) {
+            fetchers.removeAll()
+            do {
+                let widgetData = try JSONEncoder().encode(favData)
+                if let sharedFolder = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppInfo.sharedContainerIdentifier) {
+                    try FileManager.default.createDirectory(atPath: sharedFolder.appendingPathComponent("widget_data").path, withIntermediateDirectories: true)
+                    let dropPoint = sharedFolder.appendingPathComponent("widget_data/favs.json")
+                    try widgetData.write(to: dropPoint)
+                    print("Wrote favorites widget data")
+                    WidgetCenter.shared.reloadTimelines(ofKind: "FavoritesWidget")
+                }
+            } catch {
+                print("Failed to write widget data: \(error)")
+            }
+        }
+        //        }
     }
 }
