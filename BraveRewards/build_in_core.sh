@@ -6,6 +6,7 @@ current_dir="`pwd`/`dirname $0`"
 framework_drop_point="$current_dir"
 
 clean=0
+no_device=0
 release_flag="Release"
 brave_browser_dir="${@: -1}"
 
@@ -16,6 +17,7 @@ function usage() {
   echo "Usage: ./build_in_core.sh [--clean] [--debug] {\$home/brave/brave-browser}"
   echo " --clean:         Cleans build directories before building"
   echo " --debug:         Builds a debug instead of release framework. (Should not be pushed with the repo)"
+  echo " --nodevice:     Skips building the device (arm64) slices. (Should not be pushed with the repo)"
   exit 1
 }
 
@@ -33,6 +35,10 @@ case $i in
     ;;
     --clean)
     clean=1
+    shift
+    ;;
+    --nodevice)
+    no_device=1
     shift
     ;;
 esac
@@ -72,21 +78,30 @@ else
 fi
 
 npm run build -- $release_flag --target_os=ios
-npm run build -- $release_flag --target_os=ios --target_arch=arm64
 
-# Copy the framework structure (from iphoneos build) to the universal folder
-rsync -a --delete "$device_dir/BraveRewards.framework" "$framework_drop_point/"
-if [ -d "$device_dir/BraveRewards.dSYM" ]; then
-  # Copy the dSYM if available
-  pushd $device_dir > /dev/null
-  # zip up the dSYM since its too big to upload
-  zip -FSr "BraveRewards.dSYM.zip" "BraveRewards.dSYM"
-  popd > /dev/null
-  rsync -a --delete "$device_dir/BraveRewards.dSYM.zip" "$framework_drop_point/"
+# Build device ARM64 slice
+if [ "$no_device" = 0 ]; then
+  npm run build -- $release_flag --target_os=ios --target_arch=arm64
+
+  # Copy the framework structure (from iphoneos build) to the universal folder
+  rsync -a --delete "$device_dir/BraveRewards.framework" "$framework_drop_point/"
+  if [ -d "$device_dir/BraveRewards.dSYM" ]; then
+    # Copy the dSYM if available
+    pushd $device_dir > /dev/null
+    # zip up the dSYM since its too big to upload
+    zip -FSr "BraveRewards.dSYM.zip" "BraveRewards.dSYM"
+    popd > /dev/null
+    rsync -a --delete "$device_dir/BraveRewards.dSYM.zip" "$framework_drop_point/"
+  fi
+
+  # Create universal binary file using lipo and place the combined executable in the copied framework directory
+  lipo -create -output "$framework_drop_point/BraveRewards.framework/BraveRewards" "$sim_dir/BraveRewards.framework/BraveRewards" "$device_dir/BraveRewards.framework/BraveRewards"
+  lipo -create -output "$framework_drop_point/BraveRewards.framework/Frameworks/MaterialComponents.framework/MaterialComponents" "$sim_dir/BraveRewards.framework/Frameworks/MaterialComponents.framework/MaterialComponents" "$device_dir/BraveRewards.framework/Frameworks/MaterialComponents.framework/MaterialComponents"
+else
+  # Device slice was not built, so just copy the simulator slice to the right directory.
+  cp "$sim_dir/BraveRewards.framework/BraveRewards" "$framework_drop_point/BraveRewards.framework/BraveRewards"
+  cp "$sim_dir/BraveRewards.framework/Frameworks/MaterialComponents.framework/MaterialComponents" "$framework_drop_point/BraveRewards.framework/Frameworks/MaterialComponents.framework/MaterialComponents"
 fi
-
-# Create universal binary file using lipo and place the combined executable in the copied framework directory
-lipo -create -output "$framework_drop_point/BraveRewards.framework/BraveRewards" "$sim_dir/BraveRewards.framework/BraveRewards" "$device_dir/BraveRewards.framework/BraveRewards"
 
 echo "Created FAT framework: $framework_drop_point/BraveRewards.framework"
 

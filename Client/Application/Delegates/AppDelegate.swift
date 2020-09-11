@@ -32,6 +32,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UIViewControllerRestorati
     var rootViewController: UIViewController!
     weak var profile: Profile?
     var tabManager: TabManager!
+    
+    var braveCore: BraveCoreMain?
 
     weak var application: UIApplication?
     var launchOptions: [AnyHashable: Any]?
@@ -65,6 +67,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UIViewControllerRestorati
         self.window = UIWindow(frame: UIScreen.main.bounds)
         self.window!.backgroundColor = .black
         
+        //Brave Core Initialization
+        self.braveCore = BraveCoreMain()
+        self.braveCore?.setUserAgent(UserAgent.mobile)
+        
         SceneObserver.setupApplication(window: self.window!)
 
         AdBlockStats.shared.startLoading()
@@ -84,10 +90,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UIViewControllerRestorati
             //  literally never use Brave. This bypasses this situation, while not using a modifiable pref.
             KeychainWrapper.sharedAppContainerKeychain.setAuthenticationInfo(nil)
         }
-        
-        BraveCoreShared.shared()?.setUserAgentCallback({ () -> String? in
-            return UserAgent.shouldUseDesktopMode ? UserAgent.desktop : UserAgent.mobile
-        })
         
         return startApplication(application, withLaunchOptions: launchOptions)
     }
@@ -166,7 +168,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UIViewControllerRestorati
 
         self.updateAuthenticationInfo()
         SystemUtils.onFirstRun()
-
+        self.braveCore?.scheduleLowPriorityStartupTasks()
+        
         log.info("startApplication end")
         return true
     }
@@ -181,6 +184,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UIViewControllerRestorati
         self.browserViewController = nil
         self.rootViewController = nil
         SKPaymentQueue.default().remove(iapObserver)
+        self.braveCore = nil
     }
 
     /**
