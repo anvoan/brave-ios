@@ -36,6 +36,7 @@ platform :ios do
       scheme: "Debug",
       device: "iPhone 8",
       code_coverage: true,
+      skip_build: true,
       skip_testing: [
         "ClientTests/TabManagerTests/testQueryAddedTabs",
         "ClientTests/TabManagerTests/testQueryAddedPrivateTabs",
@@ -54,6 +55,7 @@ platform :ios do
       scheme: "Debug",
       device: "iPad Pro (9.7-inch)",
       code_coverage: true,
+      skip_build: true,
       xcargs: "-testPlan Brave_iPad"
     )
   end
