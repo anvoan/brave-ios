@@ -10,24 +10,24 @@ import BraveRewards
 import BraveRewardsUI
 import DeviceCheck
 
-private extension ContributionRetry {
-    var name: String {
-        switch self {
-        case .stepCurrent: return "Current"
-        case .stepFinal: return "Final"
-        case .stepNo: return "No"
-        case .stepPayload: return "Payload"
-        case .stepPrepare: return "Prepare"
-        case .stepProof: return "Proof"
-        case .stepReconcile: return "Reconcile"
-        case .stepRegister: return "Register"
-        case .stepViewing: return "Viewing"
-        case .stepVote: return "Vote"
-        case .stepWinners: return "Winners"
-        default: return "Unknown"
-        }
-    }
-}
+//private extension ContributionRetry {
+//    var name: String {
+//        switch self {
+//        case .stepCurrent: return "Current"
+//        case .stepFinal: return "Final"
+//        case .stepNo: return "No"
+//        case .stepPayload: return "Payload"
+//        case .stepPrepare: return "Prepare"
+//        case .stepProof: return "Proof"
+//        case .stepReconcile: return "Reconcile"
+//        case .stepRegister: return "Register"
+//        case .stepViewing: return "Viewing"
+//        case .stepVote: return "Vote"
+//        case .stepWinners: return "Winners"
+//        default: return "Unknown"
+//        }
+//    }
+//}
 
 class BraveRewardsSettingsViewController: TableViewController {
     

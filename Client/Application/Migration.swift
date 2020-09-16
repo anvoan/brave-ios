@@ -7,6 +7,7 @@ import Shared
 import BraveShared
 import SwiftKeychainWrapper
 import Data
+import BraveRewards
 
 private let log = Logger.browserLogger
 
@@ -22,6 +23,11 @@ class Migration {
         if !Preferences.Migration.documentsDirectoryCleanupCompleted.value {
             documentsDirectoryCleanup()
             Preferences.Migration.documentsDirectoryCleanupCompleted.value = true
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
+            print("MIGRATING!")
+            Migration.migrateBookmarksToChromium()
         }
     }
     
@@ -56,6 +62,57 @@ class Migration {
         FileManager.default.moveFile(sourceName: "CookiesData.json", sourceLocation: .documentDirectory,
                                      destinationName: "CookiesData.json",
                                      destinationLocation: .applicationSupportDirectory)
+    }
+}
+
+extension Migration {
+    static var bookmarksAPI: BraveBookmarksAPI!
+    
+    public static func migrateBookmarksToChromium() {
+        bookmarksAPI = BraveBookmarksAPI()
+        
+        Bookmark.syncChromiumMigration { bookmarks, favourites in
+            let rootFolder = Migration.bookmarksAPI.mobileNode()
+            
+            for bookmark in bookmarks {
+                print(bookmark.title)
+                print(bookmark)
+                if !migrateChromiumBookmarks(bookmark, chromiumBookmark: rootFolder!) {
+                    print("Migration Failed somehow..")
+                }
+            }
+        }
+    }
+    
+    private static func migrateChromiumBookmarks(_ bookmark: Bookmark, chromiumBookmark: BookmarkNode) -> Bool {
+        
+        guard let title = bookmark.customTitle else {
+            // Can't migrate a bookmark with no title..
+            return false
+        }
+        
+        if bookmark.isFolder {
+            // Create a folder..
+            guard let folder = chromiumBookmark.addChildFolder(withTitle: title) else {
+                // Chromium API failed to create a bookmark folder..
+                return false
+            }
+            
+            // Recursively migrate all bookmarks and sub-folders in that root folder..
+            for childBookmark in bookmark.children ?? [] {
+                if !migrateChromiumBookmarks(childBookmark, chromiumBookmark: folder) {
+                    return false
+                }
+            }
+        } else if let absoluteUrl = bookmark.url, let url = URL(string: absoluteUrl) {
+            // Migrate URLs..
+            chromiumBookmark.addChildBookmark(withTitle: title, url: url)
+        } else {
+            // Possibly something wrong with the bookmark if there is no URL :S..
+            // Maybe Javascript? Maybe can't create a URL from the string.. Not sure..
+            return false
+        }
+        return true
     }
 }
 

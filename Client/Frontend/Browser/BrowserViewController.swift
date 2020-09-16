@@ -680,12 +680,12 @@ class BrowserViewController: UIViewController {
 //        }
         
         // simulate user interaction by delaying a few seconds
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
-            self.worker = BraveSyncAPI()
-            self.worker?.setSyncEnabled(true)
-            self.worker?.setSyncCode(self.worker!.getOrCreateSyncCode())
-            print(self.worker?.getDeviceListJSON())
-        }
+        //DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+//            self.worker = BraveSyncAPI()
+//            self.worker?.setSyncEnabled(true)
+//            self.worker?.setSyncCode(self.worker!.getOrCreateSyncCode())
+//            print(self.worker?.getDeviceListJSON())
+        //}
     }
     
     private func deprecateSyncV1() {
